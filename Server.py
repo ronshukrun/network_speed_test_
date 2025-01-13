@@ -10,8 +10,8 @@ OFFER_TYPE = 0x2
 REQUEST_TYPE = 0x3
 PAYLOAD_TYPE = 0x4
 
-SERVER_UDP_PORT = int(os.getenv('SERVER_UDP_PORT', 15000))
-SERVER_TCP_PORT = int(os.getenv('SERVER_TCP_PORT', 16000))
+SERVER_UDP_PORT =  15000
+SERVER_TCP_PORT = 16000
 BUFFER_SIZE = 1024  # Size of each data chunk sent
 BROADCAST_INTERVAL = 1  # Seconds between UDP offer broadcasts
 
@@ -137,3 +137,21 @@ def handle_tcp_client(client_socket):
         print(f"Error handling TCP connection: {e}")
     finally:
         client_socket.close()
+# Main function to start both servers
+def main():
+    """
+    Main entry point for the server application.
+    """
+    print(f"Server started, listening on IP address {get_local_ip()}")
+    threading.Thread(target=udp_offer_broadcast, daemon=True).start()
+    threading.Thread(target=udp_server, daemon=True).start()
+    tcp_server()
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nServer shutting down...")
+    except Exception as e:
+        print(f"Unexpected server error: {e}")
+    finally:
+        print("Server terminated.")
