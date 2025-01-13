@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/network_speed_test_.iml" filepath="$PROJECT_DIR$/.idea/network_speed_test_.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/s.iml" filepath="$PROJECT_DIR$/.idea/s.iml" />
     </modules>
   </component>
 </project>
