@@ -22,13 +22,13 @@ REQUEST_TYPE = 0x3
 PAYLOAD_TYPE = 0x4
 BUFFER_SIZE = 1024
 UDP_TIMEOUT = 20
-SERVER_UDP_PORT = int(os.getenv('SERVER_UDP_PORT', 15000))
+BROADCAST_PORT = 12345
 
 
 def listen_for_offers():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
         udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        udp_sock.bind(("0.0.0.0", SERVER_UDP_PORT))
+        udp_sock.bind(("", BROADCAST_PORT))
         udp_sock.settimeout(UDP_TIMEOUT)
 
         print(f"{Colors.OKCYAN}Client started, listening for server offers...{Colors.ENDC}")
@@ -117,9 +117,11 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
                     # Receive data from the server (up to BUFFER_SIZE * 2 bytes at a time)
                     data, _ = udp_sock.recvfrom(BUFFER_SIZE * 2)
 
+                    payload_struct_format = '!IBQQ'
+                    payload_protocol_length = struct.calcsize(payload_struct_format)
                     # Process the packet
-                    if len(data) >= 21:
-                        magic_cookie, msg_type, total_segments, current_segment = struct.unpack('!IBQQ', data)
+                    if len(data) >= payload_protocol_length:
+                        magic_cookie, msg_type, total_segments, current_segment = struct.unpack(payload_struct_format, data[:payload_protocol_length])
                         if magic_cookie == MAGIC_COOKIE and msg_type == PAYLOAD_TYPE:
                             received_packets += 1  # Increment received packet count
 
@@ -155,11 +157,12 @@ def initiate_speed_test(server_ip, tcp_port, udp_port, file_size):
     Initiates both TCP and UDP download tests.
     Creates separate threads for each test and records their statistics.
     """
-    stats = []  # List to store statistics for TCP and UDP transfers
+    tcp_stats = []  # List to store statistics for TCP and UDP transfers
+    udp_stats = []  # List to store statistics for TCP and UDP transfers
 
     # Create threads for TCP and UDP downloads with unique connection IDs
-    tcp_thread = threading.Thread(target=tcp_download, args=(server_ip, tcp_port, file_size, 1, stats))
-    udp_thread = threading.Thread(target=udp_download, args=(server_ip, udp_port, file_size, 2, stats))
+    tcp_thread = threading.Thread(target=tcp_download, args=(server_ip, tcp_port, file_size, 1, tcp_stats))
+    udp_thread = threading.Thread(target=udp_download, args=(server_ip, udp_port, file_size, 2, udp_stats))
 
     tcp_thread.start()
     udp_thread.start()
@@ -169,15 +172,10 @@ def initiate_speed_test(server_ip, tcp_port, udp_port, file_size):
 
     # Print final summary
     print(f"{Colors.OKCYAN}All transfers completed. Summary:{Colors.ENDC}")
-    for conn_id, duration, result in stats:
-        if len(result) == 2:
-            # For TCP stats
-            speed = result[1]
-            print(f"{Colors.BOLD}TCP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}")
-        else:
-            # For UDP stats
-            success_rate = result[1]
-            print(f"{Colors.BOLD}UDP Connection #{conn_id}: Time: {duration:.2f} seconds, Success Rate: {success_rate:.2f}%.{Colors.ENDC}")
+    for conn_id, duration, speed in tcp_stats:
+        print(f"{Colors.BOLD}TCP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}")
+    for conn_id, duration, success_rate in udp_stats:
+        print(f"{Colors.BOLD}UDP Connection #{conn_id}: Time: {duration:.2f} seconds, Success Rate: {success_rate:.2f}%.{Colors.ENDC}")
 
 
 def main():
@@ -185,7 +183,7 @@ def main():
     Main function that starts the client, receives server offers,
     and initiates the speed test based on user input.
     """
-    server_ip, tcp_port, udp_port = listen_for_offers()
+    server_ip, udp_port, tcp_port = listen_for_offers()
 
     if server_ip is None or tcp_port is None:
         print(f"{Colors.WARNING}No server found. Exiting...{Colors.ENDC}")
@@ -199,6 +197,7 @@ def main():
 
     print(f"{Colors.OKCYAN}Starting speed test with file size: {file_size} bytes.{Colors.ENDC}")
     initiate_speed_test(server_ip, tcp_port, udp_port, file_size)
+
 
 if __name__ == "__main__":
     main()
