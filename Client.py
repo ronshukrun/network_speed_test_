@@ -87,7 +87,8 @@ def tcp_download(server_ip, tcp_port, file_size, id_connection, stats):
             stats.append((id_connection, total_time, speed))
 
             # Print formatted output with colors
-            print(f"{Colors.OKGREEN}✔ TCP transfer #{id_connection} complete: {bytes_received} bytes received in {total_time:.2f} seconds at {speed:.2f} bits/second.{Colors.ENDC}")
+            print(
+                f"{Colors.OKGREEN}✔ TCP transfer #{id_connection} complete: {bytes_received} bytes received in {total_time:.2f} seconds at {speed:.2f} bits/second.{Colors.ENDC}")
 
     except socket.error as e:
         print(f"{Colors.BOLD}{Colors.FAIL}❌ TCP connection error: {e}{Colors.ENDC}")
@@ -121,7 +122,9 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
                     payload_protocol_length = struct.calcsize(payload_struct_format)
                     # Process the packet
                     if len(data) >= payload_protocol_length:
-                        magic_cookie, msg_type, total_segments, current_segment = struct.unpack(payload_struct_format, data[:payload_protocol_length])
+                        magic_cookie, msg_type, total_segments, current_segment = struct.unpack(payload_struct_format,
+                                                                                                data[
+                                                                                                :payload_protocol_length])
                         if magic_cookie == MAGIC_COOKIE and msg_type == PAYLOAD_TYPE:
                             received_packets += 1  # Increment received packet count
 
@@ -130,7 +133,8 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
                                 break
                     else:
                         # Log a warning for short packets
-                        print(f"{Colors.WARNING}⚠️ Received a short packet (length: {len(data)} bytes), skipping...{Colors.ENDC}")
+                        print(
+                            f"{Colors.WARNING}⚠️ Received a short packet (length: {len(data)} bytes), skipping...{Colors.ENDC}")
 
                 except socket.timeout:
                     # Stop the download if no packet is received within 1 second
@@ -145,14 +149,15 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
             stats.append((id_connection, total_time, success_rate))
 
             # Print a summary of the UDP transfer
-            print(f"{Colors.OKGREEN}✔ UDP transfer #{id_connection} complete: {received_packets}/{total_packets} packets received ({success_rate:.2f}% success rate) in {total_time:.2f} seconds.{Colors.ENDC}")
+            print(
+                f"{Colors.OKGREEN}✔ UDP transfer #{id_connection} complete: {received_packets}/{total_packets} packets received ({success_rate:.2f}% success rate) in {total_time:.2f} seconds.{Colors.ENDC}")
 
     except Exception as e:
         print(f"{Colors.FAIL}❌ Error during UDP download: {e}{Colors.ENDC}")
 
 
 # Function to initiate the speed test
-def initiate_speed_test(server_ip, tcp_port, udp_port, file_size):
+def initiate_speed_test(server_ip, tcp_port, udp_port, file_size, tcp_nums, udp, nums):
     """
     Initiates both TCP and UDP download tests.
     Creates separate threads for each test and records their statistics.
@@ -161,6 +166,7 @@ def initiate_speed_test(server_ip, tcp_port, udp_port, file_size):
     udp_stats = []  # List to store statistics for TCP and UDP transfers
 
     # Create threads for TCP and UDP downloads with unique connection IDs
+    # list comp
     tcp_thread = threading.Thread(target=tcp_download, args=(server_ip, tcp_port, file_size, 1, tcp_stats))
     udp_thread = threading.Thread(target=udp_download, args=(server_ip, udp_port, file_size, 2, udp_stats))
 
@@ -173,9 +179,11 @@ def initiate_speed_test(server_ip, tcp_port, udp_port, file_size):
     # Print final summary
     print(f"{Colors.OKCYAN}All transfers completed. Summary:{Colors.ENDC}")
     for conn_id, duration, speed in tcp_stats:
-        print(f"{Colors.BOLD}TCP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}")
+        print(
+            f"{Colors.BOLD}TCP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}")
     for conn_id, duration, success_rate in udp_stats:
-        print(f"{Colors.BOLD}UDP Connection #{conn_id}: Time: {duration:.2f} seconds, Success Rate: {success_rate:.2f}%.{Colors.ENDC}")
+        print(
+            f"{Colors.BOLD}UDP Connection #{conn_id}: Time: {duration:.2f} seconds, Success Rate: {success_rate:.2f}%.{Colors.ENDC}")
 
 
 def main():
@@ -183,20 +191,39 @@ def main():
     Main function that starts the client, receives server offers,
     and initiates the speed test based on user input.
     """
-    server_ip, udp_port, tcp_port = listen_for_offers()
+    print(f"{Colors.HEADER}Welcome to the Speed Test Client!{Colors.ENDC}")
+
+    # Get valid inputs for file size, number of UDP threads, and TCP threads
+    file_size = get_valid_input("Enter file size for download (in bytes): ")
+    udp_threads = get_valid_input("Enter the number of UDP threads: ")
+    tcp_threads = get_valid_input("Enter the number of TCP threads: ")
+
+    # Receive the server offer
+    server_ip, tcp_port, udp_port = listen_for_offers()
 
     if server_ip is None or tcp_port is None:
         print(f"{Colors.WARNING}No server found. Exiting...{Colors.ENDC}")
         return
 
-    try:
-        file_size = int(input(f"{Colors.OKBLUE}Enter file size for download (in bytes): {Colors.ENDC}"))
-    except ValueError:
-        print(f"{Colors.FAIL}Invalid file size entered. Please enter a valid integer.{Colors.ENDC}")
-        return
-
     print(f"{Colors.OKCYAN}Starting speed test with file size: {file_size} bytes.{Colors.ENDC}")
-    initiate_speed_test(server_ip, tcp_port, udp_port, file_size)
+    initiate_speed_test(server_ip, tcp_port, udp_port, file_size, udp_threads, tcp_threads)
+
+
+
+
+def get_valid_input(prompt):
+    while True:
+        try:
+            num = int(input(f"{Colors.OKBLUE}{prompt}{Colors.ENDC}"))  # Request user input
+            if num > 0:
+                print(f"{Colors.OKGREEN}✔️ Valid input: {num}{Colors.ENDC}")
+                return num  # Return the number if it is valid (positive integer)
+            else:
+                print(f"{Colors.WARNING}⚠️ The number must be greater than 0.{Colors.ENDC}")
+        except ValueError:
+            print(f"{Colors.FAIL}❌ Invalid input! Please enter a valid integer.{Colors.ENDC}")
+        except Exception as e:
+            print(f"{Colors.FAIL}❌ Unexpected error: {e}{Colors.ENDC}")
 
 
 if __name__ == "__main__":
