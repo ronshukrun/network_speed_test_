@@ -157,24 +157,33 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
 
 
 # Function to initiate the speed test
-def initiate_speed_test(server_ip, tcp_port, udp_port, file_size, tcp_nums, udp, nums):
+def initiate_speed_test(server_ip, tcp_port, udp_port, file_size, tcp_threads, udp_threads):
     """
     Initiates both TCP and UDP download tests.
     Creates separate threads for each test and records their statistics.
     """
-    tcp_stats = []  # List to store statistics for TCP and UDP transfers
-    udp_stats = []  # List to store statistics for TCP and UDP transfers
+    tcp_stats = []  # List to store statistics for TCP transfers
+    udp_stats = []  # List to store statistics for UDP transfers
 
-    # Create threads for TCP and UDP downloads with unique connection IDs
-    # list comp
-    tcp_thread = threading.Thread(target=tcp_download, args=(server_ip, tcp_port, file_size, 1, tcp_stats))
-    udp_thread = threading.Thread(target=udp_download, args=(server_ip, udp_port, file_size, 2, udp_stats))
+    # Create and start TCP threads
+    tcp_threads_list = [
+        threading.Thread(target=tcp_download, args=(server_ip, tcp_port, file_size, i + 1, tcp_stats))
+        for i in range(tcp_threads)
+    ]
 
-    tcp_thread.start()
-    udp_thread.start()
+    # Create and start UDP threads
+    udp_threads_list = [
+        threading.Thread(target=udp_download, args=(server_ip, udp_port, file_size, i + 1, udp_stats))
+        for i in range(udp_threads)
+    ]
 
-    tcp_thread.join()
-    udp_thread.join()
+    # Start all TCP and UDP threads
+    for thread in tcp_threads_list + udp_threads_list:
+        thread.start()
+
+    # Wait for all threads to complete
+    for thread in tcp_threads_list + udp_threads_list:
+        thread.join()
 
     # Print final summary
     print(f"{Colors.OKCYAN}All transfers completed. Summary:{Colors.ENDC}")
@@ -199,7 +208,7 @@ def main():
     tcp_threads = get_valid_input("Enter the number of TCP threads: ")
 
     # Receive the server offer
-    server_ip, tcp_port, udp_port = listen_for_offers()
+    server_ip, udp_port, tcp_port = listen_for_offers()
 
     if server_ip is None or tcp_port is None:
         print(f"{Colors.WARNING}No server found. Exiting...{Colors.ENDC}")
@@ -207,8 +216,6 @@ def main():
 
     print(f"{Colors.OKCYAN}Starting speed test with file size: {file_size} bytes.{Colors.ENDC}")
     initiate_speed_test(server_ip, tcp_port, udp_port, file_size, udp_threads, tcp_threads)
-
-
 
 
 def get_valid_input(prompt):
