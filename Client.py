@@ -1,3 +1,9 @@
+import socket
+import struct
+import threading
+import time
+
+
 class Colors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -8,12 +14,6 @@ class Colors:
     BOLD = '\033[1m'
     ENDC = '\033[0m'
 
-
-import os
-import socket
-import struct
-import threading
-import time
 
 # Constants for the packet formats and magic cookie
 MAGIC_COOKIE = 0xabcddcba
@@ -30,10 +30,11 @@ def listen_for_offers():
     Listens for server offers via UDP broadcasts.
     Returns the server's IP, UDP port, and TCP port if a valid offer is received.
     """
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
-        udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        udp_sock.bind(("", BROADCAST_PORT))
-        udp_sock.settimeout(UDP_TIMEOUT)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:  # Creating a UDP socket using IPv4 (AF_INET)
+        udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # Enabling the option to send broadcast messages
+        udp_sock.bind(("",
+                       BROADCAST_PORT))  # Binding the socket to listen on all available interfaces on the specified broadcast port
+        udp_sock.settimeout(UDP_TIMEOUT)  # Setting a timeout for UDP socket operations to prevent indefinite blocking
 
         print(f"{Colors.OKCYAN}Client started, listening for server offers...{Colors.ENDC}")
         try:
@@ -52,8 +53,8 @@ def listen_for_offers():
                             print(
                                 f"{Colors.WARNING}⚠️ Received packet from {server_address[0]} but it is not a valid offer.{Colors.ENDC}")
 
-                # - struct.error: occurs if the data size or format doesn't match the unpack format.
-                # - Exception: handles any general errors (e.g., network errors or socket issues).
+                # struct.error: occurs if the data size or format doesn't match to unpack format.
+                # Exception: handles any general errors (e.g., network errors or socket issues).
                 except struct.error:
                     print(f"{Colors.FAIL}❌ Invalid packet structure received, ignoring...{Colors.ENDC}")
                 except Exception as e:
@@ -160,10 +161,11 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
 
             # Calculate total download time and success rate
             total_time = time.time() - start_time
+            speed = (received_packets * 8) / total_time if total_time > 0 else 0  # speed =  bits/second
             success_rate = (received_packets / total_packets) * 100 if total_packets > 0 else 0
 
             # Save the statistics for this connection
-            stats.append((id_connection, total_time, success_rate))
+            stats.append((id_connection, total_time, speed, success_rate))
 
             # Print a summary of the UDP transfer
             print(
@@ -212,12 +214,13 @@ def initiate_speed_test(server_ip, tcp_port, udp_port, file_size, tcp_threads, u
 
     # Print final summary
     print(f"{Colors.OKCYAN}All transfers completed. Summary:{Colors.ENDC}")
+    print(f"{Colors.OKCYAN} Summary:{Colors.ENDC}")
+
     for conn_id, duration, speed in tcp_stats:
-        print(
-            f"{Colors.BOLD}TCP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}")
-    for conn_id, duration, success_rate in udp_stats:
-        print(
-            f"{Colors.BOLD}UDP Connection #{conn_id}: Time: {duration:.2f} seconds, Success Rate: {success_rate:.2f}%.{Colors.ENDC}")
+        print(f"{Colors.BOLD}TCP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}")
+    print("")
+    for conn_id, duration, speed, success_rate in udp_stats:
+        print(f"{Colors.BOLD}UDP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}, Success Rate: {success_rate:.2f}%.{Colors.ENDC}")
 
 
 def main():
@@ -244,6 +247,15 @@ def main():
 
 
 def get_valid_input(prompt):
+    """
+    Prompts the user to input a positive integer and validates the input.
+
+    Args:
+        prompt (str): A message displayed to the user to describe the input needed.
+
+    Returns:
+        int: A valid positive integer entered by the user.
+    """
     while True:
         try:
             num = int(input(f"{Colors.OKBLUE}{prompt}{Colors.ENDC}"))  # Request user input
