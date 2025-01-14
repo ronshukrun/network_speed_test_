@@ -19,6 +19,13 @@ BROADCAST_INTERVAL = 1  # Seconds between UDP offer broadcasts
 
 # Get the server's local IP address
 def get_local_ip():
+    """
+    Retrieves the local IP address of the server by establishing a UDP connection
+    to an external server and using the local address.
+
+    Returns:
+        str: Local IP address of the server.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:  # create UDP socket and use IPv4 protocol
         try:
             s.connect(("8.8.8.8", 80))  # try to connect to DNS server with port 80
@@ -31,6 +38,14 @@ def get_local_ip():
 # The function's role is to broadcast a UDP offer message every second to announce the existence of the server and
 # announce the ports on which it is listening.
 def udp_offer_broadcast():
+    """
+    Broadcasts a UDP offer message every second to announce the server's availability
+    and the ports it is listening on. The message is sent in a binary format that includes
+    the magic cookie, message type, and ports.
+
+    This function runs indefinitely in a separate thread and is responsible for sending
+    broadcast offers to all devices on the network at regular intervals.
+    """
     offer_message = struct.pack('!IBHH', MAGIC_COOKIE, OFFER_TYPE, SERVER_UDP_PORT,
                                 SERVER_TCP_PORT)  # The UDP message is packaged using struct.pack. It packages data into binary format.
     try:
@@ -50,6 +65,13 @@ def udp_offer_broadcast():
 
 # Function to Start UDP Server
 def udp_server():
+    """
+    Starts the UDP server, binding it to the specified UDP port. The server listens for
+    incoming requests from clients and processes them in separate threads.
+
+    This function runs indefinitely, accepting UDP packets, and delegating the processing
+    to the `handle_udp_request` function.
+    """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
             udp_sock.bind(("0.0.0.0", SERVER_UDP_PORT))
@@ -64,6 +86,17 @@ def udp_server():
 
 # UDP Request Handler
 def handle_udp_request(data, client_address):
+    """
+    Handles incoming UDP requests, validates the data, and sends file segments to the client.
+
+    The function processes the request by checking the magic cookie and message type,
+    then sends the requested file in segments, each with a header containing information
+    such as the total number of segments and the current segment number.
+
+    Args:
+        data (bytes): The data received in the UDP request.
+        client_address (tuple): The address of the client sending the request.
+    """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
             if len(data) != 13:  # Magic cookie - 4 B, Message type - 1 B and File size - 8 B
@@ -97,6 +130,13 @@ def handle_udp_request(data, client_address):
 ## TCP
 # Function to Start TCP Server
 def tcp_server():
+    """
+    Starts the TCP server, listening for incoming TCP connections on the specified TCP port.
+
+    The server accepts new client connections, and for each connection, it creates a
+    new thread to handle the client request. The client request involves receiving a
+    file size and sending the corresponding number of bytes.
+    """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_sock:  # create TCP socket and use IPv4 protocol
             tcp_sock.bind(("0.0.0.0", SERVER_TCP_PORT))
@@ -113,7 +153,14 @@ def tcp_server():
 # TCP Client Handler Function
 def handle_tcp_client(client_socket):
     """
-    Handles incoming TCP client connections and sends dummy data of the requested size.
+    Handles incoming TCP client connections, receives the requested file size from
+    the client, and sends the file in chunks of a specified buffer size.
+
+    The function ensures that the file is sent in full, and each chunk is sent until
+    the complete file size is reached.
+
+    Args:
+        client_socket (socket.socket): The socket object representing the client connection.
     """
     try:
         data = client_socket.recv(

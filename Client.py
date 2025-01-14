@@ -26,6 +26,10 @@ BROADCAST_PORT = 12345
 
 
 def listen_for_offers():
+    """
+    Listens for server offers via UDP broadcasts.
+    Returns the server's IP, UDP port, and TCP port if a valid offer is received.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
         udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         udp_sock.bind(("", BROADCAST_PORT))
@@ -64,6 +68,12 @@ def listen_for_offers():
 def tcp_download(server_ip, tcp_port, file_size, id_connection, stats):
     """
     Performs a file download over TCP and records the transfer statistics.
+    Args:
+        server_ip (str): The IP address of the server.
+        tcp_port (int): The TCP port on which the server is listening.
+        file_size (int): The size of the file to download.
+        id_connection (int): Identifier for the current connection.
+        stats (list): A list to store statistics about the transfer.
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_sock:
@@ -101,6 +111,13 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
     """
     Performs a UDP speed test by sending a request and receiving data packets from the server.
     Records transfer statistics for later analysis.
+
+    Args:
+        server_ip (str): The IP address of the server.
+        udp_port (int): The UDP port on which the server is listening.
+        file_size (int): The size of the file to download.
+        id_connection (int): Identifier for the current connection.
+        stats (list): A list to store statistics about the transfer.
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
@@ -161,6 +178,14 @@ def initiate_speed_test(server_ip, tcp_port, udp_port, file_size, tcp_threads, u
     """
     Initiates both TCP and UDP download tests.
     Creates separate threads for each test and records their statistics.
+
+    Args:
+        server_ip (str): The IP address of the server.
+        tcp_port (int): The TCP port for the download.
+        udp_port (int): The UDP port for the download.
+        file_size (int): The size of the file to be downloaded.
+        tcp_threads (int): Number of threads for TCP download.
+        udp_threads (int): Number of threads for UDP download.
     """
     tcp_stats = []  # List to store statistics for TCP transfers
     udp_stats = []  # List to store statistics for UDP transfers
