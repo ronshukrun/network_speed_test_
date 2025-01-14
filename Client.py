@@ -213,8 +213,8 @@ def initiate_speed_test(server_ip, tcp_port, udp_port, file_size, tcp_threads, u
         thread.join()
 
     # Print final summary
-    print(f"{Colors.OKCYAN}All transfers completed. Summary:{Colors.ENDC}")
-    print(f"{Colors.OKCYAN} Summary:{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}All transfers completed.{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}Summary:{Colors.ENDC}")
 
     for conn_id, duration, speed in tcp_stats:
         print(f"{Colors.BOLD}TCP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}")
