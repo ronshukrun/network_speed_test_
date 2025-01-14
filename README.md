@@ -67,7 +67,6 @@ python client.py
 
     ![alt text](image-2.png)
 
-
 ### 📋 Notes:
 📌 The server's UDP broadcast will occur every second.
 
