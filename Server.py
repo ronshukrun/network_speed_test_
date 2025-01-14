@@ -3,7 +3,16 @@ import struct
 import threading
 import time
 import os
-
+# ANSI color codes for terminal output
+class Colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    BOLD = '\033[1m'
+    ENDC = '\033[0m'
 # Configuration constants
 MAGIC_COOKIE = 0xabcddcba
 OFFER_TYPE = 0x2
@@ -54,13 +63,13 @@ def udp_offer_broadcast():
                                 1)  # The socket broadcasts the message to all devices on the network
             # # udp_sock.bind(("0.0.0.0", 0))
             # udp_sock.bind(("0.0.0.0", BROADCAST_PORT))
-            print("UDP Broadcast started...")
+            print(Colors.OKBLUE + "UDP Broadcast started..."+ Colors.ENDC)
             while True:
                 udp_sock.sendto(offer_message, ('<broadcast>',
                                                 BROADCAST_PORT))  # The socket sends the offer message (offer_message) to anyone listening on the UDP port.
                 time.sleep(BROADCAST_INTERVAL)  # The program waits a period of time before sending another message.
     except Exception as e:
-        print(f"Error in UDP broadcast: {e}")
+        print(Colors.FAIL + f"Error in UDP broadcast: {e}" + Colors.ENDC)
 
 
 # Function to Start UDP Server
@@ -75,13 +84,13 @@ def udp_server():
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
             udp_sock.bind(("0.0.0.0", SERVER_UDP_PORT))
-            print(f"UDP Server listening on port {SERVER_UDP_PORT}")
+            print(Colors.OKBLUE +f"UDP Server listening on port {SERVER_UDP_PORT}"+ Colors.ENDC)
             while True:
                 data, client_address = udp_sock.recvfrom(
                     BUFFER_SIZE)  # The data that the client sent is stored in data and the address of the client that sent the data is stored in client_address.
                 threading.Thread(target=handle_udp_request, args=(data, client_address), daemon=True).start()
     except Exception as e:
-        print(f"Error in UDP server: {e}")
+        print(Colors.FAIL + f"Error in UDP server: {e}" + Colors.ENDC)
 
 
 # UDP Request Handler
@@ -100,18 +109,17 @@ def handle_udp_request(data, client_address):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
             if len(data) != 13:  # Magic cookie - 4 B, Message type - 1 B and File size - 8 B
-                print("Invalid UDP request.")
+                print(Colors.FAIL + "Invalid UDP request." + Colors.ENDC)
                 return
 
             magic_cookie, msg_type, file_size = struct.unpack('!IBQ',
                                                               data)  # Information return back to parts Magic cookie, Message type and File size.
             if magic_cookie != MAGIC_COOKIE or msg_type != REQUEST_TYPE:
-                print("Invalid UDP request header.")
+                print(Colors.FAIL + "Invalid UDP request header." + Colors.ENDC)
                 return
 
-            print(f"UDP request received for {file_size} bytes from {client_address}")
-            total_segments = (
-                                     file_size + BUFFER_SIZE - 1) // BUFFER_SIZE  # Calculating the number of segments required to send the file
+            print(Colors.OKCYAN + f"UDP request received for {file_size} bytes from {client_address}" + Colors.ENDC)
+            total_segments = (file_size + BUFFER_SIZE - 1) // BUFFER_SIZE  # Calculating the number of segments required to send the file
 
             for segment_number in range(total_segments):
                 payload_header = struct.pack('!IBQQ', MAGIC_COOKIE, PAYLOAD_TYPE, total_segments,
@@ -122,9 +130,10 @@ def handle_udp_request(data, client_address):
                 udp_sock.sendto(payload_header + payload,
                                 client_address)  # The information is sent (the header + payload) to the client address via UDP.
 
-            print(f"UDP transfer to {client_address} completed.")
+            print(Colors.OKGREEN + f"UDP transfer to {client_address} completed." + Colors.ENDC)
+
     except Exception as e:
-        print(f"Error in UDP request handler: {e}")
+        print(Colors.FAIL + f"Error in UDP request handler: {e}" + Colors.ENDC)
 
 
 ## TCP
@@ -141,13 +150,14 @@ def tcp_server():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as tcp_sock:  # create TCP socket and use IPv4 protocol
             tcp_sock.bind(("0.0.0.0", SERVER_TCP_PORT))
             tcp_sock.listen()  # Server wait to TCP request
-            print(f"TCP Server listening on port {SERVER_TCP_PORT}")
+            print(Colors.OKBLUE + f"TCP Server listening on port {SERVER_TCP_PORT}" + Colors.ENDC)
+
             while True:
                 client_socket, client_address = tcp_sock.accept()  # Accepts a new TCP connection, returns a client socket and client address
-                print(f"New TCP connection from {client_address}")
+                print(Colors.WARNING + f"New TCP connection from {client_address}" + Colors.ENDC)
                 threading.Thread(target=handle_tcp_client, args=(client_socket,), daemon=True).start()
     except Exception as e:
-        print(f"Error in TCP server: {e}")
+        print(Colors.FAIL + f"Error in TCP server: {e}" + Colors.ENDC)
 
 
 # TCP Client Handler Function
@@ -166,11 +176,12 @@ def handle_tcp_client(client_socket):
         data = client_socket.recv(
             BUFFER_SIZE).decode().strip()  # Receive data from the client, decode it to a string, and strip any whitespace or newline characters.
         if not data.isdigit():
-            print("Invalid TCP request received.")
+            print(Colors.FAIL + "Invalid TCP request received." + Colors.ENDC)
             return
 
         file_size = int(data)
-        print(f"TCP request received for {file_size} bytes.")
+        print(Colors.OKCYAN + f"TCP request received for {file_size} bytes." + Colors.ENDC)
+
         # if data is not number:
         # try:
         #     file_size = int(data)
@@ -185,9 +196,9 @@ def handle_tcp_client(client_socket):
             client_socket.sendall(chunk)
             bytes_sent += len(chunk)
 
-        print(f"TCP transfer completed. {file_size} bytes sent.")
+        print(Colors.OKGREEN + f"TCP transfer completed. {file_size} bytes sent." + Colors.ENDC)
     except Exception as e:
-        print(f"Error handling TCP connection: {e}")
+        print(Colors.FAIL + f"Error handling TCP connection: {e}" + Colors.ENDC)
     finally:
         client_socket.close()
 
@@ -197,7 +208,7 @@ def main():
     """
     Main entry point for the server application.
     """
-    print(f"Server started, listening on IP address {get_local_ip()}")
+    print(Colors.HEADER + f"Server started, listening on IP address {get_local_ip()}" + Colors.ENDC)
     threading.Thread(target=udp_offer_broadcast, daemon=True).start()
     threading.Thread(target=udp_server, daemon=True).start()
     tcp_server()
@@ -207,8 +218,8 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nServer shutting down...")
+        print(Colors.WARNING + "\nServer shutting down..."+ Colors.ENDC)
     except Exception as e:
-        print(f"Unexpected server error: {e}")
+        print(Colors.FAIL + f"Unexpected server error: {e}" + Colors.ENDC)
     finally:
-        print("Server terminated.")
+        print(Colors.OKGREEN + "Server terminated." + Colors.ENDC)
