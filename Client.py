@@ -228,7 +228,6 @@ def initiate_speed_test(server_ip, tcp_port, udp_port, file_size, tcp_threads, u
     # print("")
     # for conn_id, duration, speed, success_rate in udp_stats:
     #     print(f"{Colors.BOLD}UDP transfer #{conn_id} finished, total time: {duration:.2f} seconds, total speed: {speed:.2f} bits/second, percentage of packets received successfully: {success_rate:.2f}%.{Colors.ENDC}")
-    #
 
 
 def main():

@@ -185,7 +185,6 @@ def handle_tcp_client(client_socket):
 
         file_size = int(data)
         print(Colors.OKCYAN + f"TCP request received for {file_size} bytes." + Colors.ENDC)
-
         # if data is not number:
         # try:
         #     file_size = int(data)

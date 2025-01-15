@@ -65,7 +65,7 @@ python client.py
     ![alt text](image-1.png)
 * Client (Console):
 
-    ![alt text](image-2.png)
+    ![alt text](image.png)
 
 ### 📋 Notes:
 📌 The server's UDP broadcast will occur every second.
