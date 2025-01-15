@@ -36,7 +36,7 @@ def listen_for_offers():
                        BROADCAST_PORT))  # Binding the socket to listen on all available interfaces on the specified broadcast port
         udp_sock.settimeout(UDP_TIMEOUT)  # Setting a timeout for UDP socket operations to prevent indefinite blocking
 
-        print(f"{Colors.OKCYAN}Client started, listening for server offers...{Colors.ENDC}")
+        print(f"{Colors.OKBLUE}Client started, listening for offer requests...{Colors.ENDC}")
         try:
             while True:
                 try:
@@ -47,7 +47,7 @@ def listen_for_offers():
                         # msg_type (ip,port)
                         if magic_cookie == MAGIC_COOKIE and msg_type == OFFER_TYPE:
                             print(
-                                f"{Colors.OKGREEN}✔️ Offer received from {server_address[0]}: UDP port {udp_port}, TCP port {tcp_port}{Colors.ENDC}")
+                                f"{Colors.OKGREEN}️✔ Received offer from {server_address[0]}: UDP port {udp_port}, TCP port {tcp_port}{Colors.ENDC}")
                             return server_address[0], udp_port, tcp_port
                         else:
                             print(
@@ -61,7 +61,7 @@ def listen_for_offers():
                     print(f"{Colors.FAIL}❌ Unexpected error while listening for offers: {e}{Colors.ENDC}")
 
         except socket.timeout:
-            print(f"{Colors.WARNING}⏰ No server offer received within timeout period.{Colors.ENDC}")
+            print(f"{Colors.FAIL}⏰ No server offer received within timeout period.{Colors.ENDC}")
             return None, None
 
 
@@ -99,12 +99,13 @@ def tcp_download(server_ip, tcp_port, file_size, id_connection, stats):
 
             # Print formatted output with colors
             print(
-                f"{Colors.OKGREEN}✔ TCP transfer #{id_connection} complete: {bytes_received} bytes received in {total_time:.2f} seconds at {speed:.2f} bits/second.{Colors.ENDC}")
+                f"{Colors.OKGREEN}✔ TCP transfer #{id_connection} finished, total time: {total_time:.2f} seconds, total speed: {speed:.2f} bits/second.{Colors.ENDC}")
+
 
     except socket.error as e:
-        print(f"{Colors.BOLD}{Colors.FAIL}❌ TCP connection error: {e}{Colors.ENDC}")
+        print(f"{Colors.FAIL}❌ TCP connection error: {e}{Colors.ENDC}")
     except Exception as e:
-        print(f"{Colors.BOLD}{Colors.FAIL}❌ Error during TCP download: {e}{Colors.ENDC}")
+        print(f"{Colors.FAIL}❌ Error during TCP download: {e}{Colors.ENDC}")
 
 
 # Function to request and receive UDP data
@@ -132,6 +133,7 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
             udp_sock.settimeout(1)
 
             while True:
+                flag = False
                 try:
                     # Receive data from the server (up to BUFFER_SIZE * 2 bytes at a time)
                     data, _ = udp_sock.recvfrom(BUFFER_SIZE * 2)
@@ -156,7 +158,8 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
 
                 except socket.timeout:
                     # Stop the download if no packet is received within 1 second
-                    print(f"{Colors.WARNING}⏰ No packet received for 1 second, stopping UDP download...{Colors.ENDC}")
+                    flag = True
+                    print(f"{Colors.WARNING}⚠️ No packet received for 1 second, stopping UDP download...{Colors.ENDC}\n")
                     break
 
             # Calculate total download time and success rate
@@ -166,10 +169,14 @@ def udp_download(server_ip, udp_port, file_size, id_connection, stats):
 
             # Save the statistics for this connection
             stats.append((id_connection, total_time, speed, success_rate))
-
+            if flag:
+                total_time -= 1
             # Print a summary of the UDP transfer
             print(
-                f"{Colors.OKGREEN}✔ UDP transfer #{id_connection} complete: {received_packets}/{total_packets} packets received ({success_rate:.2f}% success rate) in {total_time:.2f} seconds.{Colors.ENDC}")
+                f"{Colors.OKGREEN}✔ UDP transfer #{id_connection} finished, total time: {total_time:.2f} seconds, total speed: {speed:.2f} bits/second, percentage of packets received successfully: {success_rate:.2f}%.{Colors.ENDC}")
+
+            # print(
+            #     f"{Colors.OKGREEN}✔ UDP transfer #{id_connection} complete: {received_packets}/{total_packets} packets received ({success_rate:.2f}% success rate) in {total_time:.2f} seconds.{Colors.ENDC}")
 
     except Exception as e:
         print(f"{Colors.FAIL}❌ Error during UDP download: {e}{Colors.ENDC}")
@@ -213,14 +220,15 @@ def initiate_speed_test(server_ip, tcp_port, udp_port, file_size, tcp_threads, u
         thread.join()
 
     # Print final summary
-    print(f"{Colors.OKCYAN}All transfers completed.{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}Summary:{Colors.ENDC}")
-
-    for conn_id, duration, speed in tcp_stats:
-        print(f"{Colors.BOLD}TCP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}")
-    print("")
-    for conn_id, duration, speed, success_rate in udp_stats:
-        print(f"{Colors.BOLD}UDP Connection #{conn_id}: Time: {duration:.2f} seconds, Speed: {speed:.2f} bits/second.{Colors.ENDC}, Success Rate: {success_rate:.2f}%.{Colors.ENDC}")
+    print(f"{Colors.OKBLUE}All transfers completed, listening to offer requests{Colors.ENDC}")
+    # print(f"{Colors.OKCYAN}Summary:{Colors.ENDC}")
+    #
+    # for conn_id, duration, speed in tcp_stats:
+    #     print(f"{Colors.BOLD}TCP transfer #{conn_id} finished, total time: {duration:.2f} seconds, total speed: {speed:.2f} bits/second.{Colors.ENDC}")
+    # print("")
+    # for conn_id, duration, speed, success_rate in udp_stats:
+    #     print(f"{Colors.BOLD}UDP transfer #{conn_id} finished, total time: {duration:.2f} seconds, total speed: {speed:.2f} bits/second, percentage of packets received successfully: {success_rate:.2f}%.{Colors.ENDC}")
+    #
 
 
 def main():
@@ -232,18 +240,18 @@ def main():
 
     # Get valid inputs for file size, number of UDP threads, and TCP threads
     file_size = get_valid_input("Enter file size for download (in bytes): ")
-    udp_threads = get_valid_input("Enter the number of UDP threads: ")
-    tcp_threads = get_valid_input("Enter the number of TCP threads: ")
+    tcp_threads = get_valid_input("Enter the number of TCP connections: ")
+    udp_threads = get_valid_input("Enter the number of UDP connections: ")
 
     # Receive the server offer
     server_ip, udp_port, tcp_port = listen_for_offers()
 
     if server_ip is None or tcp_port is None:
-        print(f"{Colors.WARNING}No server found. Exiting...{Colors.ENDC}")
+        print(f"{Colors.WARNING}⚠️ No server found. Exiting...{Colors.ENDC}")
         return
 
-    print(f"{Colors.OKCYAN}Starting speed test with file size: {file_size} bytes.{Colors.ENDC}")
-    initiate_speed_test(server_ip, tcp_port, udp_port, file_size, udp_threads, tcp_threads)
+    print(f"{Colors.OKBLUE}Starting speed test with file size: {file_size} bytes.{Colors.ENDC}")
+    initiate_speed_test(server_ip, tcp_port, udp_port, file_size, tcp_threads, udp_threads)
 
 
 def get_valid_input(prompt):
@@ -260,7 +268,7 @@ def get_valid_input(prompt):
         try:
             num = int(input(f"{Colors.OKBLUE}{prompt}{Colors.ENDC}"))  # Request user input
             if num > 0:
-                print(f"{Colors.OKGREEN}✔️ Valid input: {num}{Colors.ENDC}")
+                #print(f"{Colors.OKGREEN}✔️ Valid input: {num}{Colors.ENDC}")
                 return num  # Return the number if it is valid (positive integer)
             else:
                 print(f"{Colors.WARNING}⚠️ The number must be greater than 0.{Colors.ENDC}")

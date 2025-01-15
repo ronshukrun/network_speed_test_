@@ -3,6 +3,8 @@ import struct
 import threading
 import time
 import os
+
+
 # ANSI color codes for terminal output
 class Colors:
     HEADER = '\033[95m'
@@ -13,6 +15,8 @@ class Colors:
     FAIL = '\033[91m'
     BOLD = '\033[1m'
     ENDC = '\033[0m'
+
+
 # Configuration constants
 MAGIC_COOKIE = 0xabcddcba
 OFFER_TYPE = 0x2
@@ -84,7 +88,7 @@ def udp_server():
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
             udp_sock.bind(("0.0.0.0", SERVER_UDP_PORT))
-            print(Colors.OKBLUE +f"UDP Server listening on port {SERVER_UDP_PORT}"+ Colors.ENDC)
+            print(Colors.OKBLUE + f"UDP Server listening on port {SERVER_UDP_PORT}" + Colors.ENDC)
             while True:
                 data, client_address = udp_sock.recvfrom(
                     BUFFER_SIZE)  # The data that the client sent is stored in data and the address of the client that sent the data is stored in client_address.
